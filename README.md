@@ -10,4 +10,5 @@ This resembles our final semester project in robotics, which counts as an exam.
 * Button for switching the active team
 * Special events
   * Two more throws when both balls are hit in the same round
-  * Detecting a beer pong bomb
+  * Detecting a beer pong bomb and marking cups around the bomb cup as hit
+  * Twice a game "arranging" the cups in a better formation (but only if sensible)
