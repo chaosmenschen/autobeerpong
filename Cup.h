@@ -14,11 +14,12 @@ public:
   bool getLedRight();
   void setLedRight(bool isOn);
   void toggleGame();
-  int loop();
+  bool Cup::loop();
 private:
 	int _sensorPin;
   int _isHitLeft;
   int _isHitRight;
+  bool _leftGame;
   bool _firstGame;
   bool _ledLeft;
   bool _ledRight;
