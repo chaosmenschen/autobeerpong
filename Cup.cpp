@@ -31,22 +31,21 @@ void Cup::setLedLeft(bool isOn){
   _ledLeft = isOn;
 }
 bool Cup::getLedRight(){
-  return ledRight;
+  return _ledRight;
 }
 void Cup::setLedRight(bool isOn){
   _ledRight = isOn;
 }
-void Cup::loop() {
-  if (analogRead(_sensorPin) < 400 && _leftGame == true) {
-    _isHitLeft = true;
+bool Cup::loop() {
+  if (analogRead(_sensorPin) < 400 && _leftGame) {
     _ledLeft = true;
-    delay(500);
-  } elif(analogRead(_sensorPin) < 400 && _leftGame == false){
-    _isHitRight = true;
+    return true;
+  } else if (analogRead(_sensorPin) < 400 && _leftGame == false){
     _ledRight = true;
-    delay(500);
+    return true;
   } else {
-    _isHitLeft = false;
-    _isHitRight = false;
-  }
+    //_isHitLeft = false;
+    //_isHitRight = false;
+    return false;
+  }  
 }
