@@ -40,6 +40,8 @@ void teamSwitch() {
 }
 
 void loop() {
+  bool hit = false; // Detects whether any cup was hit this iteration
+
   if (digitalRead(ACTION_BUTTON) == LOW) {
     actionThresholdCounter++;
   } else {
@@ -57,8 +59,6 @@ void loop() {
   }
 
   if (run) {
-    bool hit = false; // Detects whether any cup was hit this iteration
-
     // This code is executed for every Cup-object
     for (int i=0; i<sizeof game/sizeof game[0]; i++) {
       // Register a hit through the return value of the loop()-method, but only if the respectie Cup isn't already fully hit (red LED)
@@ -72,7 +72,7 @@ void loop() {
       } else {
         leds[i] = CRGB(255, 150, 0);    // Set the color of the first hit cup's LED to yellow
       }
-
+    
     if (hit && hitsThisRound == 0) {  // First hit this round
       firstHitLED = i;                // Register this LED as the LED of the first cup hit this round
       leds[i] = CRGB(255, 150, 0);    // Set the color of the first hit cup's LED to yellow
@@ -87,29 +87,41 @@ void loop() {
       hitsThisRound = 0;                                                                        // Reset the hits this round
       firstHitLED = -1;                                                                         // Set the first hit LED to -1, so no LED is meant, since their indexes is positive
       // Two hit animation
+      delay(300);
+      run = false;
     }
-    }
-    teamSwitchPressed = digitalRead(TEAM_SWITCH_BUTTON) == LOW;
-    if (teamSwitchPressed && teamSwitchReleased) {
-      if (hitsThisRound == 1) {
-        // Fundamentally same reset code as above 
-        leds[firstHitLED] = CRGB::Red;
-        if (teamLeft) { game[firstHitLED].setHitLeft(true); }
-        else if (!teamLeft) { game[firstHitLED].setHitRight(true); }
-        hitsThisRound = 0;
-        firstHitLED = -1;
-        FastLED.show();
-        delay(300);
-      }
-      teamSwitch();
-      teamSwitchReleased = false;
-    } else if (!teamSwitchPressed) {
-      teamSwitchReleased = true;
-    }
+    
     FastLED.show();
     if (hit) { delay(500); } // Delay to make sure no Cup registers a hit twice
+    }
   } else {
     for (int i=0; i<sizeof game/sizeof game[0]; i++) { leds[i] = CRGB::White; } // Get every cup-LED to glow white
     FastLED.show();
+  }
+
+  teamSwitchPressed = digitalRead(TEAM_SWITCH_BUTTON) == LOW;
+  if (teamSwitchPressed && teamSwitchReleased) {
+    if (hitsThisRound == 1) {
+      // Fundamentally same reset code as above
+      leds[firstHitLED] = CRGB::Red;
+      FastLED.show();
+      delay(200);
+      leds[firstHitLED] = CRGB::White;
+      FastLED.show();
+      delay(200);
+      leds[firstHitLED] = CRGB::Red;
+      FastLED.show();
+      if (teamLeft) { game[firstHitLED].setHitLeft(true); }
+      else if (!teamLeft) { game[firstHitLED].setHitRight(true); }
+      hitsThisRound = 0;
+      firstHitLED = -1;
+      FastLED.show();
+      delay(300);
+    }
+    run = true;
+    teamSwitch();
+    teamSwitchReleased = false;
+  } else if (!teamSwitchPressed) {
+    teamSwitchReleased = true;
   }
 }
