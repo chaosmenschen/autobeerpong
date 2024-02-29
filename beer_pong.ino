@@ -3,13 +3,14 @@
 
 #define TEAM_SWITCH_BUTTON 30
 #define ACTION_BUTTON 36
+#define SELECT_BUTTON 33
 
-#define NUM_LEDS 2
+#define NUM_LEDS 3
 #define DATA_PIN_LEDS 12
 
 CRGB leds[NUM_LEDS];
 
-Cup game[2] = {Cup(A3), Cup(A4)};//, Cup(A1, 1, DATA_PIN_LEDS), Cup(A2, 2, DATA_PIN_LEDS), Cup(A3, 3, DATA_PIN_LEDS), Cup(A4, 4, DATA_PIN_LEDS), Cup(A5, 5, DATA_PIN_LEDS), Cup(A6, 6, DATA_PIN_LEDS), Cup(A7, 7, DATA_PIN_LEDS), Cup(A8, 8, DATA_PIN_LEDS), Cup(A9, 9, DATA_PIN_LEDS)};
+Cup game[3] = {Cup(A3), Cup(A4), Cup(A5)};//, Cup(A1, 1, DATA_PIN_LEDS), Cup(A2, 2, DATA_PIN_LEDS), Cup(A3, 3, DATA_PIN_LEDS), Cup(A4, 4, DATA_PIN_LEDS), Cup(A5, 5, DATA_PIN_LEDS), Cup(A6, 6, DATA_PIN_LEDS), Cup(A7, 7, DATA_PIN_LEDS), Cup(A8, 8, DATA_PIN_LEDS), Cup(A9, 9, DATA_PIN_LEDS)};
 
 bool teamLeft = true;
 int hitsThisRound = 0;
@@ -20,8 +21,12 @@ bool teamSwitchReleased = true;
 
 bool actionPressed = false;
 bool actionLongPressed = false;
-const float actionThreshold = 300;
+bool actionLongReleased = true;
+const float actionThreshold = 120;
 float actionThresholdCounter = 0;
+
+bool selectMode = false;
+int selectIndex = 0;
 
 bool run = true;
 
@@ -30,6 +35,7 @@ void setup() {
 
   pinMode(TEAM_SWITCH_BUTTON, INPUT_PULLUP);
   pinMode(ACTION_BUTTON, INPUT_PULLUP);
+  pinMode(SELECT_BUTTON, INPUT_PULLUP);
 
   FastLED.addLeds<WS2812, DATA_PIN_LEDS, GRB>(leds, NUM_LEDS);
 }
@@ -39,23 +45,40 @@ void teamSwitch() {
   for (int i=0; i<sizeof game/sizeof game[0]; i++) { game[i].toggleGame(); } // Call toggleGame() for every Cup-object
 }
 
+void runSelectMode() {
+  leds[selectIndex] = CRGB::DarkGreen;
+  if (digitalRead(SELECT_BUTTON) == LOW) {
+    selectIndex++;
+    /*if (selectIndex > sizeof game/sizeof game[0]) {
+      selectIndex = 0;
+    }*/
+  }
+  FastLED.show();
+}
+
 void loop() {
   bool hit = false; // Detects whether any cup was hit this iteration
 
+  actionPressed = false;
   if (digitalRead(ACTION_BUTTON) == LOW) {
     actionThresholdCounter++;
   } else {
     if (actionThresholdCounter != 0 && actionThresholdCounter < actionThreshold) {
       actionPressed = true;
+      selectMode = false;
       run = !run;
     }
     actionThresholdCounter = 0;
   }
 
-  if (actionThresholdCounter >= actionThreshold) {
+  if (actionThresholdCounter >= actionThreshold && actionLongReleased) {
     actionLongPressed = true;
+    actionLongReleased = false;
+    selectMode = true;
+    run = false;
   } else if (actionThresholdCounter == 0) {
     actionLongPressed = false;
+    actionLongReleased = true;
   }
 
   if (run) {
@@ -94,13 +117,13 @@ void loop() {
     FastLED.show();
     if (hit) { delay(500); } // Delay to make sure no Cup registers a hit twice
     }
-  } else {
+  } else if (!selectMode) {
     for (int i=0; i<sizeof game/sizeof game[0]; i++) { leds[i] = CRGB::White; } // Get every cup-LED to glow white
     FastLED.show();
   }
 
   teamSwitchPressed = digitalRead(TEAM_SWITCH_BUTTON) == LOW;
-  if (teamSwitchPressed && teamSwitchReleased) {
+  if (teamSwitchPressed && teamSwitchReleased && !selectMode) {
     if (hitsThisRound == 1) {
       // Fundamentally same reset code as above
       leds[firstHitLED] = CRGB::Red;
@@ -123,5 +146,9 @@ void loop() {
     teamSwitchReleased = false;
   } else if (!teamSwitchPressed) {
     teamSwitchReleased = true;
+  }
+
+  if (selectMode) {
+    runSelectMode();
   }
 }
