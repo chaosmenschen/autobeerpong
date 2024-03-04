@@ -7,10 +7,14 @@
 
 #define NUM_LEDS 3
 #define DATA_PIN_LEDS 12
+#define LEDS_PER_CUP 1
 
 CRGB leds[NUM_LEDS];
+CRGB real_leds[NUM_LEDS*LEDS_PER_CUP];
 
 Cup game[3] = {Cup(A3), Cup(A4), Cup(A5)};//, Cup(A1, 1, DATA_PIN_LEDS), Cup(A2, 2, DATA_PIN_LEDS), Cup(A3, 3, DATA_PIN_LEDS), Cup(A4, 4, DATA_PIN_LEDS), Cup(A5, 5, DATA_PIN_LEDS), Cup(A6, 6, DATA_PIN_LEDS), Cup(A7, 7, DATA_PIN_LEDS), Cup(A8, 8, DATA_PIN_LEDS), Cup(A9, 9, DATA_PIN_LEDS)};
+
+
 
 bool teamLeft = true;
 int hitsThisRound = 0;
@@ -37,7 +41,21 @@ void setup() {
   pinMode(ACTION_BUTTON, INPUT_PULLUP);
   pinMode(SELECT_BUTTON, INPUT_PULLUP);
 
-  FastLED.addLeds<WS2812, DATA_PIN_LEDS, GRB>(leds, NUM_LEDS);
+  FastLED.addLeds<WS2812, DATA_PIN_LEDS, GRB>(real_leds, NUM_LEDS*LEDS_PER_CUP);
+
+  real_leds[0] = CRGB::Blue;
+  FastLED.show();
+}
+
+void updateLEDs() {
+  int led_index = 0;
+  for (int i=0; i<sizeof game/sizeof game[0]; i++) {
+    for (int j=0; j<LEDS_PER_CUP; j++) {
+      real_leds[led_index] = leds[i];
+      led_index++;
+    }
+  }
+  FastLED.show();
 }
 
 void teamSwitch() {
@@ -53,7 +71,7 @@ void runSelectMode() {
       selectIndex = 0;
     }*/
   }
-  FastLED.show();
+  updateLEDs();
 }
 
 void loop() {
@@ -114,12 +132,12 @@ void loop() {
       run = false;
     }
     
-    FastLED.show();
+    updateLEDs();
     if (hit) { delay(500); } // Delay to make sure no Cup registers a hit twice
     }
   } else if (!selectMode) {
     for (int i=0; i<sizeof game/sizeof game[0]; i++) { leds[i] = CRGB::White; } // Get every cup-LED to glow white
-    FastLED.show();
+    updateLEDs();
   }
 
   teamSwitchPressed = digitalRead(TEAM_SWITCH_BUTTON) == LOW;
@@ -127,18 +145,18 @@ void loop() {
     if (hitsThisRound == 1) {
       // Fundamentally same reset code as above
       leds[firstHitLED] = CRGB::Red;
-      FastLED.show();
+      updateLEDs();
       delay(200);
       leds[firstHitLED] = CRGB::White;
-      FastLED.show();
+      updateLEDs();
       delay(200);
       leds[firstHitLED] = CRGB::Red;
-      FastLED.show();
+      updateLEDs();
       if (teamLeft) { game[firstHitLED].setHitLeft(true); }
       else if (!teamLeft) { game[firstHitLED].setHitRight(true); }
       hitsThisRound = 0;
       firstHitLED = -1;
-      FastLED.show();
+      updateLEDs();
       delay(300);
     }
     run = true;
