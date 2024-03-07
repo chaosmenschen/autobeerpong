@@ -7,7 +7,7 @@
 
 #define NUM_LEDS 3
 #define DATA_PIN_LEDS 12
-#define LEDS_PER_CUP 1
+#define LEDS_PER_CUP 3
 
 CRGB leds[NUM_LEDS];
 CRGB real_leds[NUM_LEDS*LEDS_PER_CUP];
@@ -28,6 +28,11 @@ bool actionLongPressed = false;
 bool actionLongReleased = true;
 const float actionThreshold = 120;
 float actionThresholdCounter = 0;
+
+bool selectButtonPressed = false;
+bool selectButtonReleased = true;
+bool firstRun;
+CRGB pastLED;
 
 bool selectMode = false;
 int selectIndex = 0;
@@ -64,13 +69,42 @@ void teamSwitch() {
 }
 
 void runSelectMode() {
-  leds[selectIndex] = CRGB::DarkGreen;
-  if (digitalRead(SELECT_BUTTON) == LOW) {
-    selectIndex++;
-    /*if (selectIndex > sizeof game/sizeof game[0]) {
-      selectIndex = 0;
-    }*/
+  if (firstRun) {
+    pastLED = leds[selectIndex];
+    leds[selectIndex] = CRGB::DarkGreen;
+    firstRun = false;
   }
+  selectButtonPressed = digitalRead(SELECT_BUTTON) == LOW;
+  if (selectButtonPressed && selectButtonReleased) {
+    leds[selectIndex] = pastLED;
+    selectButtonReleased = false;
+    selectIndex++;
+    if (selectIndex >= sizeof game/sizeof game[0]) {
+      selectIndex = 0;
+    }
+    pastLED = leds[selectIndex];
+    leds[selectIndex] = CRGB::DarkGreen;
+  } else if (!selectButtonPressed) {
+    selectButtonReleased = true;
+  }
+
+  if (actionPressed) {
+    if (selectIndex == firstHitLED) { firstHitLED = -1; hitsThisRound = 0; }
+    if (teamLeft) {
+      bool newState = !game[selectIndex].getLedLeft();
+      game[selectIndex].setLedLeft(newState);
+      game[selectIndex].setHitLeft(newState);
+      if (game[selectIndex].getLedLeft()) { leds[selectIndex] = CRGB::Red; updateLEDs(); delay(500); pastLED = CRGB::Red; leds[selectIndex] = CRGB::DarkGreen; updateLEDs(); }
+      else                                { leds[selectIndex] = CRGB::Black; updateLEDs(); delay(500); pastLED = CRGB::Black; leds[selectIndex] = CRGB::DarkGreen; updateLEDs(); }
+    } else {
+      bool newState = !game[selectIndex].getLedRight();
+      game[selectIndex].setLedRight(newState);
+      game[selectIndex].setHitRight(newState);
+      if (game[selectIndex].getLedRight()) { leds[selectIndex] = CRGB::Red; updateLEDs(); delay(500); pastLED = CRGB::Red; leds[selectIndex] = CRGB::DarkGreen; updateLEDs(); }
+      else                                 { leds[selectIndex] = CRGB::Black; updateLEDs(); delay(500); pastLED = CRGB::Black; leds[selectIndex] = CRGB::DarkGreen; updateLEDs(); }
+    }
+  }
+  
   updateLEDs();
 }
 
@@ -83,8 +117,7 @@ void loop() {
   } else {
     if (actionThresholdCounter != 0 && actionThresholdCounter < actionThreshold) {
       actionPressed = true;
-      selectMode = false;
-      run = !run;
+      if(!selectMode) { run = !run; }
     }
     actionThresholdCounter = 0;
   }
@@ -92,8 +125,9 @@ void loop() {
   if (actionThresholdCounter >= actionThreshold && actionLongReleased) {
     actionLongPressed = true;
     actionLongReleased = false;
-    selectMode = true;
-    run = false;
+    if (run || selectMode ) { selectMode = !selectMode; }
+    if (selectMode) { firstRun = true; run = false; }
+    else            { run = true; }
   } else if (actionThresholdCounter == 0) {
     actionLongPressed = false;
     actionLongReleased = true;
@@ -136,7 +170,7 @@ void loop() {
     if (hit) { delay(500); } // Delay to make sure no Cup registers a hit twice
     }
   } else if (!selectMode) {
-    for (int i=0; i<sizeof game/sizeof game[0]; i++) { leds[i] = CRGB::White; } // Get every cup-LED to glow white
+    for (int i=0; i<sizeof game/sizeof game[0]; i++) { leds[i] = CRGB(100, 100, 100); } // Get every cup-LED to glow white
     updateLEDs();
   }
 
